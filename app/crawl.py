@@ -4,11 +4,11 @@ from collections import deque
 import xml.etree.ElementTree as ET
 
 
-initial_url = 'https://govclab.com/2023/05/30/the-venture-institute-the-vc-career-launchpad/'
+initial_url = 'https://www.example.com'
 root_domain = initial_url.split('/')[2]
 scheme = initial_url.split(':')[0] + '://'
 urls_to_crawl = []
-sitemap_urls = []
+sitemap_contents = []
 urls_crawled = []
 
 def parse_sitemap(sitemap_url):
@@ -21,7 +21,7 @@ def parse_sitemap(sitemap_url):
 if 'sitemap' in initial_url and 'xml' in initial_url:
   # Parse the XML sitemap and populate the urls_to_crawl array
   urls_to_crawl = deque(parse_sitemap(initial_url))
-  sitemap_urls = deque(parse_sitemap(initial_url))
+  sitemap_contents = deque(parse_sitemap(initial_url))
 else:
   # Strip out the root domain and add 'robots.txt'
   robots_url = root_domain + '/robots.txt'
@@ -37,6 +37,7 @@ else:
     for url in urls:
       if 'sitemap' in url and 'xml' in url:
         urls_to_crawl.extend(parse_sitemap(url))
+        sitemap_contents.extend(parse_sitemap(url))
       else:
         urls_to_crawl.append(urls)
 
@@ -161,4 +162,9 @@ while urls_to_crawl:
         urls_to_crawl.remove(url)
         # Add it to the urls_crawled array
         urls_crawled.append(url)
+        # Add the strings to the urls_to_crawl array
+        ### TODO ###
+        # this needs to only take the final item from destinations
         urls_to_crawl.append(destinations)
+        if url in sitemap_contents:
+          # Do things
