@@ -134,10 +134,10 @@ while urls_to_crawl:
     for link in lnx:
       l = link.get('href')
       t = link.get_text()
-      get_url_status(link)
-      if url_status == 301 or url_status == 302:
+      link_url_status = get_url_status(link)
+      if link_url_status == 301 or link_url_status == 302:
         redirect_links += 1
-      elif url_status == 404:
+      elif link_url_status == 404:
         links_404 += 1
       if t:
           link_anchor.append(t)
@@ -237,5 +237,5 @@ while urls_to_crawl:
     ### TODO ###
     # this needs to only take the final item from destinations
     urls_to_crawl.append(destinations)
-    if url in sitemap_contents:
+    #if url in sitemap_contents:
       # Do things
