@@ -7,7 +7,7 @@ import os
 
 
 
-initial_url = 'https://govclab.com/sitemap_index.xml'
+initial_url = 'https://example.com/'
 root_domain = initial_url.split('/')[2]
 scheme = initial_url.split(':')[0] + '://'
 urls_to_crawl = set()
@@ -33,8 +33,9 @@ def parse_sitemap(url, urls_to_crawl, sitemap_contents):
  for u in urls:
   url_str = u.string
   if '/wp-content/uploads/' not in url_str:
-    urls_to_crawl.add(url_str)
-    sitemap_contents.add(url_str)
+    if url_str not in urls_to_crawl and url_str not in urls_crawled:
+       urls_to_crawl.add(url_str)
+       sitemap_contents.add(url_str)
 
  if sitemaps:
    for u in sitemaps:
@@ -62,8 +63,9 @@ else:
     for url in urls:
       if 'sitemap' in url and 'xml' in url:
         parse_sitemap(url, urls_to_crawl, sitemap_contents)
-      else:
-        urls_to_crawl.add(urls)
+      elif url not in urls_to_crawl and url not in urls_crawled:
+        urls_to_crawl.add(url)
+        sitemap_contents.add(url)
 
 url_status = "null"
 # open empty array for possible redirect chains
@@ -79,6 +81,7 @@ def get_url_status(url):
     status = requests.get(url)
     # store the status code
     url_status = status.status_code
+    print(url_status)
     # if there are redirects
     if len(status.history) > 0:
       # get the trace history of the get request
@@ -115,8 +118,10 @@ while urls_to_crawl:
   get_url_status(url)
   if url_status == 200:
     if 'sitemap' in url and 'xml' in url:
-      parse_sitemap(url, urls_to_crawl, sitemap_contents)
-      continue
+        parse_sitemap(url, urls_to_crawl, sitemap_contents)
+        continue
+    elif 'wp-content/' in url:
+        continue
     response = requests.get(url)
     soup = BeautifulSoup(response.content, 'html.parser')
     # Store the DOM in a variable
@@ -133,7 +138,7 @@ while urls_to_crawl:
     if url in urls_to_crawl:
         urls_to_crawl.remove(url)
     # Add it to the urls_crawled array
-    urls_crawled.add(url)
+    urls_crawled.append(url)
 
     # get and check links
     out_links = 0
@@ -159,9 +164,10 @@ while urls_to_crawl:
         if l.startswith('/'):
             l = f"{scheme}{root_domain}{l}"
         if root_domain in l:
-          if l not in urls_to_crawl:
+          if l not in urls_to_crawl and l not in urls_crawled:
               if '#' not in l:
-                urls_to_crawl.add(l)
+                if '/wp-content/' not in l:
+                    urls_to_crawl.add(l)
           in_links += 1
         else:
           out_links += 1
@@ -195,7 +201,10 @@ while urls_to_crawl:
       h3.append(heading)
 
     # Extract page title
-    page_title = str(soup.title.string)
+    if soup.title.string:
+      page_title = str(soup.title.string)
+    else:
+      page_title = 'No Title'
     
     # Extract all meta tags
     meta_tags = soup.find_all('meta')
@@ -224,28 +233,39 @@ while urls_to_crawl:
     })
 
     # Write crawl_overview_data and links_data to CSV files
-    with open('crawl_overview.csv', 'a', newline='', encoding='utf-8') as file:
-     writer = csv.DictWriter(file, fieldnames=crawl_overview_data[0].keys())
-     if not os.path.isfile('crawl_overview.csv') or os.stat('crawl_overview.csv').st_size == 0:
-       writer.writeheader()
-     writer.writerows(crawl_overview_data)
+    if crawl_overview_data:
+        with open('crawl_overview.csv', 'a', newline='', encoding='utf-8') as file:
+            writer = csv.DictWriter(file, fieldnames=crawl_overview_data[0].keys())
+            if not os.path.isfile('crawl_overview.csv') or os.stat('crawl_overview.csv').st_size == 0:
+                writer.writeheader()
+            writer.writerows(crawl_overview_data)
+    else:
+        print("No data to write to CSV.")
   
-    with open('links.csv', 'a', newline='', encoding='utf-8') as file:
-      writer = csv.DictWriter(file, fieldnames=links_data[0].keys())
-      if not os.path.isfile('links.csv') or os.stat('links.csv').st_size == 0:
-        writer.writeheader()
-      writer.writerows(links_data)
+    if links_data:
+        with open('links.csv', 'a', newline='', encoding='utf-8') as file:
+            writer = csv.DictWriter(file, fieldnames=links_data[0].keys())
+            if not os.path.isfile('links.csv') or os.stat('links.csv').st_size == 0:
+                writer.writeheader()
+            writer.writerows(links_data)
+    else:
+        print("No data to write to CSV.")
 
-    with open('urls_to_crawl.csv', 'a', newline='', encoding='utf-8') as file:
-        writer = csv.DictWriter(file, fieldnames=['URL'])
-        if not os.path.isfile('urls_to_crawl.csv') or os.stat('urls_to_crawl.csv').st_size == 0:
-            writer.writeheader()
-        for url in urls_to_crawl:
-            writer.writerow({'URL': url})
+    if urls_to_crawl:
+        with open('urls_to_crawl.csv', 'a', newline='', encoding='utf-8') as file:
+            writer = csv.DictWriter(file, fieldnames=['URL'])
+            if not os.path.isfile('urls_to_crawl.csv') or os.stat('urls_to_crawl.csv').st_size == 0:
+                writer.writeheader()
+            for url in urls_to_crawl:
+                writer.writerow({'URL': url})
+    else:
+        print("No data to write to CSV.")
 
     # Clear crawl_overview_data and links_data for the next iteration
     crawl_overview_data.clear()
     links_data.clear()
+    print(len(urls_to_crawl))
+    print(len(urls_crawled))
 
   elif url_status > 200:
     # Remove the URL from the urls_to_crawl array
@@ -255,7 +275,8 @@ while urls_to_crawl:
     # Add the strings to the urls_to_crawl array
     ### TODO ###
     # this needs to only take the final item from destinations
-    urls_to_crawl.add(destinations)
+    if destinations not in urls_to_crawl and destinations not in urls_crawled:
+        urls_to_crawl.add(destinations)
     # if url in sitemap_contents:
     # Do things
 
