@@ -157,15 +157,18 @@ while urls_to_crawl:
         redirect_links += 1
       elif link_url_status == 404:
         links_404 += 1
-      if t:
-          link_anchor.append(t)
-      if l:
-        link_href.append(l)
-        if l.startswith('/'):
+      if t and l:
+       link_dict = {
+           'url crawled': url,
+           'link_anchor': t,
+           'link_href': l,
+           'link_url_status': link_url_status
+       }
+       if l.startswith('/'):
             l = f"{scheme}{root_domain}{l}"
-        if root_domain in l:
+       if root_domain in l:
           if l not in urls_to_crawl and l not in urls_crawled:
-              if '#' not in l:
+             if '#' not in l:
                 if '/wp-content/' not in l:
                     urls_to_crawl.add(l)
           in_links += 1
@@ -173,13 +176,7 @@ while urls_to_crawl:
           out_links += 1
           
     # links to array for export
-    for href in link_href:
-      links_data.append({
-        'url crawled': url,
-        'link_anchor': link_anchor,
-        'link_href': href,
-        'link_url_status': link_url_status
-      })
+    links_data.append(link_dict)
       
     # parse the heading tags
     h1_raw = soup.find_all('h1')
@@ -264,6 +261,7 @@ while urls_to_crawl:
     # Clear crawl_overview_data and links_data for the next iteration
     crawl_overview_data.clear()
     links_data.clear()
+    redirects = 0
     print(len(urls_to_crawl))
     print(len(urls_crawled))
 
