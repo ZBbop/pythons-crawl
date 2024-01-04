@@ -152,29 +152,29 @@ while urls_to_crawl:
     for link in lnx:
       l = link.get('href')
       t = link.get_text()
-      link_url_status = get_url_status(link)
+      if l.startswith('/'):
+        l = f"{scheme}{root_domain}{l}"
+      if root_domain in l:
+        if l not in urls_to_crawl and l not in urls_crawled:
+          if '#' not in l:
+            if '/wp-content/' not in l:
+              link_url_status = get_url_status(link)
+              urls_to_crawl.add(l)
+        in_links += 1
+      else:
+        out_links += 1
       if link_url_status == 301 or link_url_status == 302:
         redirect_links += 1
       elif link_url_status == 404:
         links_404 += 1
       if t and l:
-       link_dict = {
+        link_dict = {
            'url crawled': url,
            'link_anchor': t,
            'link_href': l,
            'link_url_status': link_url_status
-       }
-       if l.startswith('/'):
-            l = f"{scheme}{root_domain}{l}"
-       if root_domain in l:
-          if l not in urls_to_crawl and l not in urls_crawled:
-             if '#' not in l:
-                if '/wp-content/' not in l:
-                    urls_to_crawl.add(l)
-          in_links += 1
-        else:
-          out_links += 1
-          
+        }
+
     # links to array for export
     links_data.append(link_dict)
       
