@@ -13,3 +13,7 @@ if xml sitemap parse and populate an array of urls to crawl
 pop the first url in the array 
 
 get the status code > get stuff
+
+### Output
+
+It is currently written to output to a csv
