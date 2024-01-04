@@ -2,14 +2,16 @@ import requests
 from bs4 import BeautifulSoup
 from collections import deque
 import xml.etree.ElementTree as ET
+import csv
 import os
 
 
-initial_url = 'https://www.example.com'
+
+initial_url = 'https://govclab.com/sitemap_index.xml'
 root_domain = initial_url.split('/')[2]
 scheme = initial_url.split(':')[0] + '://'
-urls_to_crawl = []
-sitemap_contents = []
+urls_to_crawl = set()
+sitemap_contents = set()
 urls_crawled = []
 #data to output
 crawl_overview_data = []
@@ -31,8 +33,8 @@ def parse_sitemap(url, urls_to_crawl, sitemap_contents):
  for u in urls:
   url_str = u.string
   if '/wp-content/uploads/' not in url_str:
-    urls_to_crawl.append(url_str)
-    sitemap_contents.append(url_str)
+    urls_to_crawl.add(url_str)
+    sitemap_contents.add(url_str)
 
  if sitemaps:
    for u in sitemaps:
@@ -61,7 +63,7 @@ else:
       if 'sitemap' in url and 'xml' in url:
         parse_sitemap(url, urls_to_crawl, sitemap_contents)
       else:
-        urls_to_crawl.append(urls)
+        urls_to_crawl.add(urls)
 
 url_status = "null"
 # open empty array for possible redirect chains
@@ -100,12 +102,21 @@ def get_url_status(url):
     url_status = "Connection Timeout"
   except requests.exceptions.TooManyRedirects:
     url_status = "Redirect Loop or Too Many"
+  except requests.exceptions.InvalidSchema:
+    url_status = "Invalid Schema"
 
 while urls_to_crawl:
   url = urls_to_crawl.pop()
   # Make the soup
+  if scheme not in url:
+    if root_domain not in url:
+      url = f"{scheme}{root_domain}{url}"
+    url = f"{scheme}{url}"
   get_url_status(url)
   if url_status == 200:
+    if 'sitemap' in url and 'xml' in url:
+      parse_sitemap(url, urls_to_crawl, sitemap_contents)
+      continue
     response = requests.get(url)
     soup = BeautifulSoup(response.content, 'html.parser')
     # Store the DOM in a variable
@@ -115,12 +126,14 @@ while urls_to_crawl:
     if url in sitemap_contents:
       sitemap_bool = 1
     else:
-      continue
-        
+      sitemap_bool = 0
+
+    print(url)    
     # Remove the URL from the urls_to_crawl array
-    urls_to_crawl.remove(url)
+    if url in urls_to_crawl:
+        urls_to_crawl.remove(url)
     # Add it to the urls_crawled array
-    urls_crawled.append(url)
+    urls_crawled.add(url)
 
     # get and check links
     out_links = 0
@@ -148,7 +161,7 @@ while urls_to_crawl:
         if root_domain in l:
           if l not in urls_to_crawl:
               if '#' not in l:
-                urls_to_crawl.append(l)
+                urls_to_crawl.add(l)
           in_links += 1
         else:
           out_links += 1
@@ -211,22 +224,28 @@ while urls_to_crawl:
     })
 
     # Write crawl_overview_data and links_data to CSV files
-    with open('crawl_overview.csv', 'a', newline='') as file:
+    with open('crawl_overview.csv', 'a', newline='', encoding='utf-8') as file:
      writer = csv.DictWriter(file, fieldnames=crawl_overview_data[0].keys())
      if not os.path.isfile('crawl_overview.csv') or os.stat('crawl_overview.csv').st_size == 0:
        writer.writeheader()
      writer.writerows(crawl_overview_data)
   
-    with open('links.csv', 'a', newline='') as file:
+    with open('links.csv', 'a', newline='', encoding='utf-8') as file:
       writer = csv.DictWriter(file, fieldnames=links_data[0].keys())
       if not os.path.isfile('links.csv') or os.stat('links.csv').st_size == 0:
         writer.writeheader()
       writer.writerows(links_data)
 
+    with open('urls_to_crawl.csv', 'a', newline='', encoding='utf-8') as file:
+        writer = csv.DictWriter(file, fieldnames=['URL'])
+        if not os.path.isfile('urls_to_crawl.csv') or os.stat('urls_to_crawl.csv').st_size == 0:
+            writer.writeheader()
+        for url in urls_to_crawl:
+            writer.writerow({'URL': url})
+
     # Clear crawl_overview_data and links_data for the next iteration
     crawl_overview_data.clear()
     links_data.clear()
-
 
   elif url_status > 200:
     # Remove the URL from the urls_to_crawl array
@@ -236,6 +255,10 @@ while urls_to_crawl:
     # Add the strings to the urls_to_crawl array
     ### TODO ###
     # this needs to only take the final item from destinations
-    urls_to_crawl.append(destinations)
-    #if url in sitemap_contents:
-      # Do things
+    urls_to_crawl.add(destinations)
+    # if url in sitemap_contents:
+    # Do things
+
+
+
+  
