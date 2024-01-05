@@ -25,7 +25,7 @@ def parse_sitemap(url, urls_to_crawl, sitemap_contents):
   if response.status_code != 200:
     return urls_to_crawl, sitemap_contents
 
-  if 'Content-Encoding' in response.headers and response.headers['Content-Encoding'] == 'gzip':
+  if 'Content-Type' in response.headers and response.headers['Content-Type'] == 'application/x-gzip':
     response.raw.decode_content = True
     decompressed_data = gzip.GzipFile(fileobj=BytesIO(response.content))
     soup = BeautifulSoup(decompressed_data, "xml")
