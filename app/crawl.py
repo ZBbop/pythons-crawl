@@ -4,6 +4,8 @@ from collections import deque
 import xml.etree.ElementTree as ET
 import csv
 import os
+import gzip
+from io import BytesIO
 
 
 
