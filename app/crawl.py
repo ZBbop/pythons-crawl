@@ -19,11 +19,16 @@ links_data = []
 
 # parse the sitemap into locs
 def parse_sitemap(url, urls_to_crawl, sitemap_contents):
- response = requests.get(url)
- if response.status_code != 200:
-   return urls_to_crawl, sitemap_contents
+  response = requests.get(url)
+  if response.status_code != 200:
+    return urls_to_crawl, sitemap_contents
 
- soup = BeautifulSoup(response.content, "xml")
+  if 'Content-Encoding' in response.headers and response.headers['Content-Encoding'] == 'gzip':
+    response.raw.decode_content = True
+    decompressed_data = gzip.GzipFile(fileobj=BytesIO(response.content))
+    soup = BeautifulSoup(decompressed_data, "xml")
+  else:
+    soup = BeautifulSoup(response.content, "xml")
  urls = soup.findAll('loc')
  sitemaps = soup.findAll('sitemap')
 
