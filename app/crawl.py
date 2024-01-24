@@ -334,8 +334,12 @@ for url in urls_crawled:
     #count = site_internal_links.isin([url]).sum()
     count = site_internal_links.apply(lambda x: x == url).sum()
     url_counts[url] = count
-print(url_counts)
-# Step 4 & 5: Open vcl-crawl_overview.csv
+
+#good to leave for verification of crawl in terminal without having to open the files
+# a lot of zeroes means something went wrong
+print(url_counts) 
+
+# add count to crawl_overview
 url_search = df_overview.iloc[:, 0]
 df_overview['links_in'] = url_search.apply(lambda x: url_counts.get(x, 0))
 
